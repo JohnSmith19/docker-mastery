@@ -594,9 +594,9 @@ $ sudo docker image tag nginx-with-html:latest johnsmith/nginx
 
 $ sudo docker image ls
 REPOSITORY                          TAG                 IMAGE ID            CREATED             SIZE
-johnsmith/nginx-with-html   latest              9b78dc259148        3 minutes ago       88.1MB
+johnsmith/nginx-with-html           latest              9b78dc259148        3 minutes ago       88.1MB
 nginx-with-html                     latest              9b78dc259148        3 minutes ago       88.1MB
-nginx                                      latest              8401ca2419eb        9 days ago          88.1MB
+nginx                               latest              8401ca2419eb        9 days ago          88.1MB
 ```
 
 ## Assignment: Build Your Own Dockerfile and Run Containers From It
