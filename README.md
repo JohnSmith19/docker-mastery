@@ -330,7 +330,7 @@ CONTAINER ID        IMAGE               COMMAND                  CREATED        
 …
 ```
 
-### Docker Networks: DNS and How Containers Find Each Other
+## Docker Networks: DNS and How Containers Find Each Other
 
 Docker defaults the hostname to the container’s name, but you can also set aliases
 
