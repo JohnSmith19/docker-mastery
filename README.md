@@ -441,3 +441,202 @@ db52ebe454dc        elasticsearch:2     "/docker-entrypoint.…"   5 minutes ago
 hardcore_aryabhata
 stoic_shockley
 ```
+
+## Container Images
+
+### The Mighty Hub
+Basics of Docker Hub
+Find Official and other good public images
+Download images and basics of image tags
+
+```bash
+➜  ~ docker image ls
+
+https://hub.docker.com/_/nginx/
+
+➜  ~ docker pull nginx
+Using default tag: latest
+
+➜  ~ docker pull nginx:1.11.9
+Status: Downloaded newer image for nginx:1.11.9
+```
+
+### Images and Their Layers: Discover the Image Cache
+https://docs.docker.com/storage/storagedriver/
+
+```bash
+➜  ~ docker history nginx:latest
+IMAGE               CREATED             CREATED BY                                      SIZE                COMMENT
+06144b287844        11 days ago         /bin/sh -c #(nop)  CMD ["nginx" "-g" "daemon…   0B
+<missing>           11 days ago         /bin/sh -c #(nop)  STOPSIGNAL [SIGTERM]         0B
+<missing>           11 days ago         /bin/sh -c #(nop)  EXPOSE 80/tcp                0B
+<missing>           11 days ago         /bin/sh -c ln -sf /dev/stdout /var/log/nginx…   22B
+<missing>           11 days ago         /bin/sh -c set -x  && apt-get update  && apt…   53.8MB
+<missing>           11 days ago         /bin/sh -c #(nop)  ENV NJS_VERSION=1.15.3.0.…   0B
+<missing>           11 days ago         /bin/sh -c #(nop)  ENV NGINX_VERSION=1.15.3-…   0B
+<missing>           11 days ago         /bin/sh -c #(nop)  LABEL maintainer=NGINX Do…   0B
+<missing>           11 days ago         /bin/sh -c #(nop)  CMD ["bash"]                 0B
+<missing>           11 days ago         /bin/sh -c #(nop) ADD file:e6ca98733431f75e9…   55.3MB
+
+➜  ~ docker image inspect nginx
+```
+
+### Image Tagging and Push to Darker Hub
+
+https://hub.docker.com/r/library/mysql/tags/
+
+https://hub.docker.com/r/library/nginx/
+
+```bash
+➜  ~ docker pull nginx:mainline
+mainline: Pulling from library/nginx
+Digest: sha256:24a0c4b4a4c0eb97a1aabb8e29f18e917d05abfe1b7a7c07857230879ce7d3d3
+Status: Downloaded newer image for nginx:mainline
+
+➜  ~ docker image ls
+REPOSITORY           TAG                 IMAGE ID            CREATED             SIZE
+nginx                alpine              994032453556        4 days ago          17.4MB
+nginx                latest              06144b287844        11 days ago         109MB
+nginx                mainline            06144b287844        11 days ago         109MB
+```
+
+### “Lates” Tag
+It’s just the default tag, but image owners should assign it to the newest stable version
+
+```bash
+➜  ~ docker image tag nginx john/nginx
+➜  ~ docker image tag —help
+
+Usage:    docker image tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]
+
+Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE
+
+➜  ~ docker image ls
+REPOSITORY           TAG                 IMAGE ID            CREATED             SIZE
+john/nginx           latest              06144b287844        11 days ago         109MB
+nginx                latest              06144b287844        11 days ago         109MB
+nginx                mainline            06144b287844        11 days ago         109MB
+```
+
+- docker login <server>
+Defaults to logging in hub, but you can override by adding server url
+
+= docker logout
+Always logout from shared machines or servers when done, to protect your account
+
+- docker image push
+Uploads changed layers to a image registry (default is hub)
+
+```bash
+➜  ~ docker image tag nginx johnsmith19/nginx
+➜  ~ docker image push johnsmith19/nginx
+The push refers to repository [docker.io/johnsmith19/nginx]
+579c75bb43c0: Pushed
+67d3ae5dfa34: Pushed
+8b15606a9e3e: Pushed
+latest: digest: sha256:c0b69559d28fb325a64c6c8f47d14c26b95aa047312b29c699da10380e90b4d7 size: 948
+
+
+➜  ~ docker image tag johnsmith19/nginx johnsmith19/nginx:testing
+➜  ~ docker image ls
+REPOSITORY           TAG                 IMAGE ID            CREATED             SIZE
+johnsmith19/nginx    latest              06144b287844        11 days ago         109MB
+johnsmith19/nginx    testing             06144b287844        11 days ago         109MB
+
+
+➜  ~ docker image push johnsmith19/nginx:testing
+The push refers to repository [docker.io/johnsmith19/nginx]
+579c75bb43c0: Layer already exists
+67d3ae5dfa34: Layer already exists
+8b15606a9e3e: Layer already exists
+testing: digest: sha256:c0b69559d28fb325a64c6c8f47d14c26b95aa047312b29c699da10380e90b4d7 size: 948
+```
+
+### Building Images: The Dockerfile Basics
+
+https://docs.docker.com/engine/reference/builder/#usage
+e.g. docker build -f some-dockerfile
+
+### Building Images: Running Docker Builds
+
+[Dockerfile](https://github.com/JohnSmith19/docker-mastery/blob/master/dockerfile-sample-1/Dockerfile)
+
+$ docker image build -t customnginx .
+
+### Building Images: Extending Official Images
+
+[Dockerfile](https://github.com/JohnSmith19/docker-mastery/blob/master/dockerfile-sample-2/Dockerfile)
+
+```bash
+$ sudo docker image build -t nginx-with-html .
+Sending build context to Docker daemon  3.072kB
+Step 1/3 : FROM nginx:latest
+---> 8401ca2419eb
+Step 2/3 : WORKDIR /usr/share/nginx/html
+---> Running in 90c711aaaa97
+Removing intermediate container 90c711aaaa97
+---> aadd5d0702bd
+Step 3/3 : COPY index.html index.html
+---> 9b78dc259148
+Successfully built 9b78dc259148
+Successfully tagged nginx-with-html:latest
+
+$ sudo docker container run -p 80:80 --rm nginx-with-html
+
+$ sudo docker image tag --help
+
+Usage:  docker image tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]
+
+Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE
+
+$ sudo docker image tag nginx-with-html:latest johnsmith/nginx
+-with-html:latest
+
+$ sudo docker image ls
+REPOSITORY                          TAG                 IMAGE ID            CREATED             SIZE
+johnsmith/nginx-with-html   latest              9b78dc259148        3 minutes ago       88.1MB
+nginx-with-html                     latest              9b78dc259148        3 minutes ago       88.1MB
+nginx                                      latest              8401ca2419eb        9 days ago          88.1MB
+```
+
+## Assignment: Build Your Own Dockerfile and Run Containers From It
+
+- Dockerfiles are part process workflow and prt art
+- Take existing Node.js app and Dockerize it
+- Make Dockerfile. Build it. Test it. Push it. (rm it). Run it.
+- Expect this to be iterative. Rarely do I get it right the first time.
+- Details in dockerfile-assignment-1/Dockerfile
+- User the Alpine version of the official 'node' 6.x image
+- Expected result is web site at http://localhost
+- Tag and push to your Docker Hub account (free)
+- Remove your image from local cache, run again from Hub
+
+[Dockerfile](https://github.com/JohnSmith19/docker-mastery/blob/master/dockerfile-assignment-1/Dockerfile)
+
+```bash
+
+$ docker build -t testnode .
+
+$ docker container run --rm -p 80:3000 testnode
+
+$ docker push --help
+
+Usage:  docker push [OPTIONS] NAME[:TAG]
+Push an image or a repository to a registry
+Options:
+      --disable-content-trust   Skip image signing (default true)
+
+$ docker tag testnode johnsmith19/testing-node
+
+$ docker push johnsmith19/testing-node
+
+$ docker image ls
+REPOSITORY               TAG                 IMAGE ID            CREATED             SIZE
+testnode                 latest              55a6051c3984        42 minutes ago      63MB
+johnsmith/testing-node   latest              55a6051c3984        42 minutes ago      63MB
+node                     6-alpine            ac75c1f95b80        4 weeks ago         55.2MB
+
+$ docker image rm johnsmith19/testing-node
+
+$ docker container run --rm -p 80:3000 johnsmith19/testing-node
+```
