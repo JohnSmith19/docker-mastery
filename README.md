@@ -640,3 +640,219 @@ $ docker image rm johnsmith19/testing-node
 
 $ docker container run --rm -p 80:3000 johnsmith19/testing-node
 ```
+
+## Container Lifetime & Persistent Data
+
+- Defining the problem of persistent data
+- Key concepts with containers: immutable, ephemeral
+- Learning and using Data Volumes
+- Learning and using Bind Mounts
+- Assignments
+
+
+
+
+- Containers are usually immutable and ephemeral
+- "immutable infrastructure": only re-deploy containers, never chagne
+- This is the ideal scenario,  but what about databases, or unique data?
+- Docker gives us features to ensure these "separation of concerns"
+- This is known as "persistent data"
+- Two ways: Volumes and Bind Mounts
+- Volumes: make special location outside of container UFS
+- Bind Mounts: link container path to host path
+
+## Persistent Data: Data Volumes
+
+[Dockerfile](https://github.com/docker-library/mysql/blob/9d1f62552b5dcf25d3102f14eb82b579ce9f4a26/5.7/Dockerfile)
+
+VOLUME /var/lib/mysql
+
+```bash
+$ docker pull mysql
+
+Using default tag: latest
+latest: Pulling from library/mysql
+802b00ed6f79: Pull complete
+30f19a05b898: Pull complete
+3e43303be5e9: Pull complete
+94b281824ae2: Pull complete
+51eb397095b1: Pull complete
+54567da6fdf0: Pull complete
+bc57ddb85cce: Pull complete
+d6cd3c7302aa: Pull complete
+d8263dad8dbb: Pull complete
+780f2f86056d: Pull complete
+8e0761cb58cd: Pull complete
+7588cfc269e5: Pull complete
+Digest: sha256:038f5f6ea8c8f63cfce1bce9c057ab3691cad867e18da8ad4ba6c90874d0537a
+Status: Downloaded newer image for mysql:latest
+
+
+$ docker image inspect mysql
+
+...
+            "ArgsEscaped": true,
+            "Image": "sha256:17a4269e383069c990084b4f8bb31c34d28f92d5947c14d48a179b328d5cac61",
+            "Volumes": {
+                "/var/lib/mysql": {}
+            },
+...
+
+
+$ docker container run -d --name mysql -e MYSQL_ALLOW_EMPTY_PASSWORD=True mysql
+d8c9754e4f0e6d120a5ac5b5bd16f8a4c78f21c85dcd7498b59c16ea0bf205ee
+
+
+$ docker container ls
+CONTAINER ID           IMAGE             COMMAND                      CREATED                 STATUS                  PORTS                         NAMES
+d8c9754e4f0e            mysql               "docker-entrypoint.s…"    27 seconds ago      Up 25 seconds       3306/tcp, 33060/tcp   mysql
+
+
+$ docker container inspect mysql
+
+...
+        "Mounts": [
+            {
+                "Type": "volume",
+                "Name": "942836dfed7c5cf6f831dc557c652071fbdcab8932584d326ed3c8a8cb87866e",
+                "Source": "/var/lib/docker/volumes/942836dfed7c5cf6f831dc557c652071fbdcab8932584d326ed3c8a8cb87866e/_data",
+                "Destination": "/var/lib/mysql",
+                "Driver": "local",
+                "Mode": "",
+                "RW": true,
+                "Propagation": ""
+            }
+        ],
+...
+
+$ docker volume ls
+DRIVER              VOLUME NAME
+local               942836dfed7c5cf6f831dc557c652071fbdcab8932584d326ed3c8a8cb87866e
+
+
+$ docker volume inspect 942836dfed7c5cf6f831dc557c652071fbdcab8932584d326ed3c8a8cb87866e
+[
+    {
+        "CreatedAt": "2018-10-14T10:02:33Z",
+        "Driver": "local",
+        "Labels": null,
+        "Mountpoint": "/var/lib/docker/volumes/942836dfed7c5cf6f831dc557c652071fbdcab8932584d326ed3c8a8cb87866e/_data",
+        "Name": "942836dfed7c5cf6f831dc557c652071fbdcab8932584d326ed3c8a8cb87866e",
+        "Options": null,
+        "Scope": "local"
+    }
+]
+
+$ docker container run -d --name mysql2 -e MYSQL_ALLOW_EMPTY_PASSWORD=True mysql
+652ff87a8c1b06994f10e974790c99ad815efa614df25c6f2daa96cf3c7cc595
+
+$ docker volume ls
+DRIVER              VOLUME NAME
+local               942836dfed7c5cf6f831dc557c652071fbdcab8932584d326ed3c8a8cb87866e
+local               c77a8ddaea6b3d9ffc326ee24e2e1ccc7160a2b7596f80d98d0440fe99645c34
+
+
+$ docker container stop mysql
+mysql
+
+$ docker container stop mysql2
+mysql2
+
+$ docker container ls
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+
+$ docker container ls -a
+CONTAINER ID          IMAGE               COMMAND                        CREATED                       STATUS                         
+PORTS               NAMES
+652ff87a8c1b            mysql               "docker-entrypoint.s…"       About a minute ago      Exited (0) 10 seconds ago                               mysql2
+d8c9754e4f0e           mysql               "docker-entrypoint.s…"       7 minutes ago                Exited (0) 18 seconds ago                               mysql
+
+$ docker volume ls
+DRIVER              VOLUME NAME
+local               942836dfed7c5cf6f831dc557c652071fbdcab8932584d326ed3c8a8cb87866e
+local               c77a8ddaea6b3d9ffc326ee24e2e1ccc7160a2b7596f80d98d0440fe99645c34
+
+$ docker container rm mysql mysql2
+mysql
+mysql2
+
+$ docker volume ls
+DRIVER              VOLUME NAME
+local               942836dfed7c5cf6f831dc557c652071fbdcab8932584d326ed3c8a8cb87866e
+local               c77a8ddaea6b3d9ffc326ee24e2e1ccc7160a2b7596f80d98d0440fe99645c34
+```
+
+
+### Named Volumes
+friendly way to assing vols to containers
+
+```bash
+$ docker container run -d --name mysql -e MYSQL_ALLOW_EMPTY_PASSWORD=True -v mysql-db:/var/lib/mysql mysql
+0c039c5d5a1864acb3e8fa049e85d6dcfc26c117b645a83efed2053200653036
+
+
+$ docker volume ls
+DRIVER              VOLUME NAME
+local               942836dfed7c5cf6f831dc557c652071fbdcab8932584d326ed3c8a8cb87866e
+local               c77a8ddaea6b3d9ffc326ee24e2e1ccc7160a2b7596f80d98d0440fe99645c34
+local               mysql-db
+
+
+$ docker volume inspect mysql-db
+[
+    {
+        "CreatedAt": "2018-10-14T10:16:28Z",
+        "Driver": "local",
+        "Labels": null,
+        "Mountpoint": "/var/lib/docker/volumes/mysql-db/_data",
+        "Name": "mysql-db",
+        "Options": null,
+        "Scope": "local"
+    }
+]
+
+$ docker container rm -f mysql
+
+$ docker container run -d --name mysql3 -e MYSQL_ALLOW_EMPTY_PASSWORD=True -v mysql-db:/var/lib/mysql mysql
+039b92ed4d1b506bdd76999d100e4b1dcc821573ca3b123d68c6388370cd2993
+
+
+$ docker volume ls
+DRIVER              VOLUME NAME
+local               942836dfed7c5cf6f831dc557c652071fbdcab8932584d326ed3c8a8cb87866e
+local               c77a8ddaea6b3d9ffc326ee24e2e1ccc7160a2b7596f80d98d0440fe99645c34
+local               mysql-db
+
+$ docker container inspect mysql3
+...
+        "Mounts": [
+            {
+                "Type": "volume",
+                "Name": "mysql-db",
+                "Source": "/var/lib/docker/volumes/mysql-db/_data",
+                "Destination": "/var/lib/mysql",
+                "Driver": "local",
+                "Mode": "z",
+                "RW": true,
+                "Propagation": ""
+            }
+        ],
+...
+
+```
+
+### Docker volume create
+requred to do this before "docker run" to use custom drivers and labels
+
+```bash
+$ docker volume create --help
+
+Usage:  docker volume create [OPTIONS] [VOLUME]
+
+Create a volume
+
+Options:
+  -d, --driver string   Specify volume driver name (default "local")
+      --label list      Set metadata for a volume
+  -o, --opt map         Set driver specific options (default map[])
+```
