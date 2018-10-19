@@ -856,3 +856,96 @@ Options:
       --label list      Set metadata for a volume
   -o, --opt map         Set driver specific options (default map[])
 ```
+
+## Persistent Data: Bind Mounting
+
+- Maps a host file or directory to a container file or directory
+- Basically just two locations pointing to the same file(s)
+- Again, skips UFS, and host files overwrite any in container
+- Can't use in Dockerfile, must be at container run
+- ... run -v /Users/john/stuff:/path/container (mac/linux)
+- ... run -v //c/Users/john/stuff:/path/container (windows)
+
+```bash
+dockerfile-sample-2$ cat Dockerfile
+# this same shows how we can extend/change an existing official image from Docker Hub
+
+FROM nginx:latest
+# highly recommend you always pin versions for anything beyond dev/learn
+
+WORKDIR /usr/share/nginx/html
+# change working directory to root of nginx webhost
+# using WORKDIR is preferred to using 'RUN cd /some/path'
+
+COPY index.html index.html
+
+# I don't have to specify EXPOSE or CMD because they're in my FROM
+```
+
+```bash
+$ docker container run -d --name nginx -p 80:80 -v $(pwd):/user/share/nginx/html nginx
+
+$ docker container run -d --name nginx2 -p 8080:80 nginx
+
+$ docker container exec -it nginx bash
+root@6b5999efcd45:/# cd /usr/share/nginx/html/
+root@6b5999efcd45:/usr/share/nginx/html# ls -al
+total 12
+drwxr-xr-x 4 root root  128 Oct 17 14:32 .
+drwxr-xr-x 3 root root 4096 Sep  5 00:56 ..
+-rw-r--r-- 1 root root  415 Oct 17 14:32 Dockerfile
+-rw-r--r-- 1 root root  249 Oct 17 14:32 index.html
+
+$ touch testme.txt
+
+root@6b5999efcd45:/usr/share/nginx/html# ls -al
+total 12
+drwxr-xr-x 5 root root  160 Oct 18 11:11 .
+drwxr-xr-x 3 root root 4096 Sep  5 00:56 ..
+-rw-r--r-- 1 root root  415 Oct 17 14:32 Dockerfile
+-rw-r--r-- 1 root root  249 Oct 17 14:32 index.html
+-rw-r--r-- 1 root root    0 Oct 18 11:11 testme.txt
+
+$ echo "is it me you're looking for" > testme.txt
+
+http://localhost/testme.txt
+is it me you're looking for
+```
+
+## Assignment: Database Upgrades with Named Volumes
+
+- Database upgrade with containers
+- Create a postgres container with named volume sql-data using version 9.6.1
+- Use Docker Hub to learn VOLUME path and versions needed to run it
+- Check logs, stop container
+- Create a new postgres container with same named volume using 9.6.2
+- Check logs to validate
+
+```bash
+$ docker container run -d --name psql -v psql:/var/lib/postgresql/data postgres:9.6.1
+$ docker container stop 1ad12722b4f8
+
+$ docker container ps -a
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                      PORTS               NAMES
+f266a5d08989        postgres:9.6.1      "/docker-entrypoint.…"   6 seconds ago       Up 5 seconds                5432/tcp            psql2
+1ad12722b4f8        postgres:9.6.1      "/docker-entrypoint.…"   3 minutes ago       Exited (0) 39 seconds ago                       psql
+
+$ docker volume ls
+DRIVER              VOLUME NAME
+local                   psql
+
+$ docker container logs f266a5d08989
+LOG:  database system was shut down at 2018-10-18 11:57:08 UTC
+LOG:  MultiXact member wraparound protections are now enabled
+LOG:  database system is ready to accept connections
+LOG:  autovacuum launcher started
+```
+
+## Assignment: Bind Mounts
+
+- Use a Jekyll ‘Static Site Generator” to start a local web server
+- Don’t have to be web developer: this is example of bridging the gap between local file access and apps running in containers
+- source code is in the source repo under bindmount-sample-1
+- We edit files with editor on our host using native tools
+- Container detects changes with host files and updates web server
+- start container with docker run -p 80:4000 -v $(pwd):/site johnsmith19/jekyll-serve
