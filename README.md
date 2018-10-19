@@ -948,4 +948,8 @@ LOG:  autovacuum launcher started
 - source code is in the source repo under bindmount-sample-1
 - We edit files with editor on our host using native tools
 - Container detects changes with host files and updates web server
-- start container with docker run -p 80:4000 -v $(pwd):/site johnsmith19/jekyll-serve
+- start container with docker run -p 80:4000 -v $(pwd):/site bretfisher/jekyll-serve
+
+```bash
+$ bindmount-sample-1 git:(master) ✗ docker run -p 80:4000 -v $(pwd):/site bretfisher/jekyll-serve
+```
